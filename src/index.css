@@ -149,7 +149,6 @@ ul, ol { list-style: none; }
   height: 8px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 10px currentColor;
 }
 
 .app-mode-banner__message {

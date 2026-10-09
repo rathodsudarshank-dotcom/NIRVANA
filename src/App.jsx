@@ -17,11 +17,13 @@ function AppShell() {
 
   return (
     <>
-      <div className={`app-mode-banner ${backendMode === 'connected' ? 'app-mode-banner--connected' : 'app-mode-banner--demo'}`}>
-        <span className="app-mode-banner__status-dot" />
-        {apiLoading ? 'Checking backend status…' : backendMode === 'connected' ? 'Connected mode: backend active' : 'Demo mode: simulated readings and AI output only'}
-        {apiError && <span className="app-mode-banner__message">{apiError}</span>}
-      </div>
+      {(apiLoading || backendMode === 'connected' || apiError) && (
+        <div className={`app-mode-banner ${backendMode === 'connected' ? 'app-mode-banner--connected' : 'app-mode-banner--demo'}`}>
+          <span className="app-mode-banner__status-dot" />
+          {apiLoading ? 'Checking backend status…' : backendMode === 'connected' ? 'Connected mode: backend active' : null}
+          {apiError && <span className="app-mode-banner__message">{apiError}</span>}
+        </div>
+      )}
 
       <Navbar />
       <main style={{ paddingTop: '72px' }}>
