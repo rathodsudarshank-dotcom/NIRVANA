@@ -144,7 +144,7 @@ export function readJsonBody(req, maxSizeBytes = 10000) {
       try {
         const raw = Buffer.concat(chunks).toString('utf8');
         resolve(raw ? JSON.parse(raw) : {});
-      } catch (error) {
+      } catch {
         reject(new Error('Invalid JSON payload.'));
       }
     });

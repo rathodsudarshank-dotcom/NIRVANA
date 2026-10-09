@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test api/_lib/security.test.js",
+    "test": "node --test",
     "preview": "vite preview"
   },
   "dependencies": {

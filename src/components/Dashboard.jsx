@@ -71,6 +71,7 @@ function HealthRing({ score, risk }) {
 export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitioning, simulateAnomaly, resetSimulation, compact = false }) {
   const ref = useScrollReveal();
   const [activeTab, setActiveTab] = useState('overview');
+  const tabRefs = useRef([]);
 
   const riskClass = bridgeState.risk === 'LOW' ? 'risk-low' : bridgeState.risk === 'HIGH' ? 'risk-high' : 'risk-medium';
   const riskBarColor = bridgeState.risk === 'HIGH' ? 'var(--status-red)' : bridgeState.risk === 'MEDIUM' ? 'var(--status-amber)' : 'var(--status-green)';
@@ -84,16 +85,32 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
   ];
 
   const tabs = ['Overview', 'Sensors', 'Images', 'Reports'];
+  const handleTabKeyDown = (event, index) => {
+    let nextIndex;
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    setActiveTab(tabs[nextIndex].toLowerCase());
+    tabRefs.current[nextIndex]?.focus();
+  };
 
   const content = (
     <div className={`dashboard ${compact ? 'dashboard--compact' : ''}`}>
       {/* Tabs */}
-      <div className="dashboard__tabs" role="tablist">
-        {tabs.map(tab => (
+      <div className="dashboard__tabs" role="tablist" aria-label="Dashboard views">
+        {tabs.map((tab, index) => (
           <button
             key={tab}
+            id={`dashboard-tab-${tab.toLowerCase()}`}
             role="tab"
             aria-selected={activeTab === tab.toLowerCase()}
+            tabIndex={activeTab === tab.toLowerCase() ? 0 : -1}
+            ref={(element) => { tabRefs.current[index] = element; }}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
             className={`dashboard__tab ${activeTab === tab.toLowerCase() ? 'dashboard__tab--active' : ''}`}
             onClick={() => setActiveTab(tab.toLowerCase())}
           >
@@ -111,12 +128,18 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
           </div>
         </div>
         <div className={`dashboard__status-badge ${riskClass}`}>
-          <span className={`status-dot ${bridgeState.risk === 'HIGH' ? 'status-dot--red' : bridgeState.risk === 'MEDIUM' ? 'status-dot--amber' : 'status-dot--green'}`} />
+          <span aria-hidden="true" className={`status-dot ${bridgeState.risk === 'HIGH' ? 'status-dot--red' : bridgeState.risk === 'MEDIUM' ? 'status-dot--amber' : 'status-dot--green'}`} />
           {BRIDGE_INFO.status}
         </div>
       </div>
 
       {/* Tab Content */}
+      <div
+        id={`dashboard-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`dashboard-tab-${activeTab}`}
+        tabIndex={0}
+      >
       {activeTab === 'overview' && (
         <div className="dashboard__body">
           {/* Metrics */}
@@ -288,6 +311,7 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
           <ReportsTab bridgeState={bridgeState} aiState={aiState} />
         </div>
       )}
+      </div>
     </div>
   );
 

@@ -4,7 +4,7 @@
 // baseline comparisons, and export utilities.
 // ============================================================
 
-import { BRIDGE_INFO } from './bridgeData';
+import { BRIDGE_INFO } from './bridgeData.js';
 
 export const STRUCTURAL_COMPONENTS = {
   girder: {

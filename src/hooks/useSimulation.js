@@ -167,7 +167,7 @@ export function useSimulation() {
 
         if (reportData?.reports?.length) {
           setReports(reportData.reports);
-          setActiveReportId(reportData.reports[0]?.id || activeReportId);
+          setActiveReportId((currentId) => reportData.reports[0]?.id || currentId);
         }
 
         setBackendMode('connected');

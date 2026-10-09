@@ -1,7 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import { SimulationProvider, useSimulationContext } from './context/SimulationContext';
+import { useApiStatusContext } from './context/SimulationContext';
+import { SimulationProvider } from './context/SimulationProvider';
 
 import Home from './pages/Home';
 import About from './pages/About';
@@ -13,7 +14,7 @@ import Reports from './pages/Reports';
 import Contact from './pages/Contact';
 
 function AppShell() {
-  const { backendMode, apiLoading, apiError } = useSimulationContext();
+  const { backendMode, apiLoading, apiError } = useApiStatusContext();
 
   return (
     <>

@@ -54,11 +54,11 @@ export function useScrollReveal(options = {}) {
  */
 export function useStaggerReveal(count, baseDelay = 100) {
   const refs = useRef([]);
-  const timers = useRef([]);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const observers = [];
+    const pendingTimers = new Map();
 
     refs.current.forEach((el, i) => {
       if (!el) return;
@@ -71,9 +71,10 @@ export function useStaggerReveal(count, baseDelay = 100) {
         ([entry]) => {
           if (entry.isIntersecting) {
             const timer = setTimeout(() => el.classList.add('revealed'), i * baseDelay);
-            timers.current[i] = timer;
+            pendingTimers.set(i, timer);
           } else {
-            clearTimeout(timers.current[i]);
+            clearTimeout(pendingTimers.get(i));
+            pendingTimers.delete(i);
             el.classList.remove('revealed');
           }
         },
@@ -85,7 +86,7 @@ export function useStaggerReveal(count, baseDelay = 100) {
 
     return () => {
       observers.forEach((o) => o.disconnect());
-      timers.current.forEach((t) => clearTimeout(t));
+      pendingTimers.forEach((timer) => clearTimeout(timer));
     };
   }, [count, baseDelay]);
 
