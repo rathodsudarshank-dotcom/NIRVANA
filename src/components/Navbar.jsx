@@ -15,7 +15,6 @@ export default function Navbar() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    setMobileOpen(false);
   }, [location.pathname]);
 
   const links = [
@@ -39,9 +38,10 @@ export default function Navbar() {
 
           <div className="navbar__links">
             {links.map(l => (
-              <NavLink 
-                key={l.path} 
-                to={l.path} 
+              <NavLink
+                key={l.path}
+                to={l.path}
+                onClick={() => setMobileOpen(false)}
                 className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}
                 end={l.path === '/'}
               >
@@ -50,7 +50,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          <Link to="/monitor" className="navbar__cta navbar__cta-desktop">
+          <Link to="/monitor" className="navbar__cta navbar__cta-desktop" onClick={() => setMobileOpen(false)}>
             View Live Monitoring
           </Link>
 
@@ -69,16 +69,17 @@ export default function Navbar() {
 
       <div className={`navbar__mobile-menu ${mobileOpen ? 'open' : ''}`}>
         {links.map(l => (
-          <NavLink 
-            key={l.path} 
-            to={l.path} 
+          <NavLink
+            key={l.path}
+            to={l.path}
+            onClick={() => setMobileOpen(false)}
             className={({ isActive }) => `navbar__mobile-link ${isActive ? 'active' : ''}`}
             end={l.path === '/'}
           >
             {l.label}
           </NavLink>
         ))}
-        <Link to="/monitor" className="btn btn--primary btn--sm" style={{ marginTop: '20px', width: '100%', textAlign: 'center' }}>
+        <Link to="/monitor" className="btn btn--primary btn--sm" style={{ marginTop: '20px', width: '100%', textAlign: 'center' }} onClick={() => setMobileOpen(false)}>
           View Live Monitoring
         </Link>
       </div>

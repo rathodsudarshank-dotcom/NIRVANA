@@ -18,27 +18,30 @@ export function useScrollReveal(options = {}) {
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const el = ref.current;
-    if (!el) return;
+    const element = ref.current;
+    if (!element) return;
 
     if (prefersReduced) {
-      el.classList.add('revealed');
+      element.classList.add('revealed');
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          el.classList.add('revealed');
+          element.classList.add('revealed');
         } else {
-          el.classList.remove('revealed');
+          element.classList.remove('revealed');
         }
       },
       { threshold: options.threshold ?? 0.18, rootMargin: options.rootMargin ?? '0px' }
     );
 
-    observer.observe(el);
-    return () => observer.disconnect();
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      element.classList.remove('revealed');
+    };
   }, [options.threshold, options.rootMargin]);
 
   return ref;

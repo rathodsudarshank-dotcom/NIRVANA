@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef } from 'react';
 import { NORMAL_STATE, ANOMALY_STATE, AI_NORMAL, AI_ANOMALY } from '../data/bridgeData';
+import { INITIAL_REPORTS, createSimulatedAnomalyReport } from '../data/reportData';
 
 export function useSimulation() {
   const [isAnomaly, setIsAnomaly] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [bridgeState, setBridgeState] = useState({ ...NORMAL_STATE });
   const [aiState, setAiState] = useState({ ...AI_NORMAL });
+  const [reports, setReports] = useState(INITIAL_REPORTS);
+  const [activeReportId, setActiveReportId] = useState(INITIAL_REPORTS[0]?.id || 'REP-2026-0915-01');
   const animFrameRef = useRef(null);
 
   const animateValues = useCallback((from, to, aiTarget, duration = 1800) => {
@@ -70,6 +73,13 @@ export function useSimulation() {
   const simulateAnomaly = useCallback(() => {
     if (isAnomaly || isTransitioning) return;
     setIsAnomaly(true);
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const newSimReport = createSimulatedAnomalyReport(now, ANOMALY_STATE, AI_ANOMALY);
+
+    setReports(prev => [newSimReport, ...prev]);
+    setActiveReportId(newSimReport.id);
+
     animateValues(NORMAL_STATE, ANOMALY_STATE, AI_ANOMALY);
   }, [isAnomaly, isTransitioning, animateValues]);
 
@@ -77,14 +87,29 @@ export function useSimulation() {
     if (!isAnomaly || isTransitioning) return;
     setIsAnomaly(false);
     animateValues(ANOMALY_STATE, NORMAL_STATE, AI_NORMAL);
+    // Historical reports are preserved (Requirement 6)
   }, [isAnomaly, isTransitioning, animateValues]);
+
+  const clearDemoReports = useCallback(() => {
+    setReports(prev => {
+      const filtered = prev.filter(r => !r.isSimulated);
+      if (filtered.length > 0) {
+        setActiveReportId(filtered[0].id);
+      }
+      return filtered.length > 0 ? filtered : INITIAL_REPORTS;
+    });
+  }, []);
 
   return {
     isAnomaly,
     isTransitioning,
     bridgeState,
     aiState,
+    reports,
+    activeReportId,
+    setActiveReportId,
     simulateAnomaly,
     resetSimulation,
+    clearDemoReports,
   };
 }

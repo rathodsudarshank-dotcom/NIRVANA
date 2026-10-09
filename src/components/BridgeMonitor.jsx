@@ -95,7 +95,8 @@ function SensorMarker({ sensor, bridgeState, isAnomaly }) {
 }
 
 export default function BridgeMonitor({ bridgeState, isAnomaly, compact = false }) {
-  const ref = useScrollReveal();
+  const headerRef = useScrollReveal();
+  const monitorRef = useScrollReveal();
 
   if (compact) {
     return (
@@ -133,7 +134,7 @@ export default function BridgeMonitor({ bridgeState, isAnomaly, compact = false 
   return (
     <section className="section">
       <div className="container container--wide">
-        <div ref={ref} className="reveal">
+        <div ref={headerRef} className="reveal">
           <div className="section__label">Live Monitoring</div>
           <h2 className="section__title">Riverside Bridge — Sensor Overlay</h2>
           <p className="section__subtitle">
@@ -142,7 +143,7 @@ export default function BridgeMonitor({ bridgeState, isAnomaly, compact = false 
           </p>
         </div>
 
-        <div className="bridge-monitor reveal-scale" ref={useScrollReveal()}>
+        <div className="bridge-monitor reveal-scale" ref={monitorRef}>
           <div className="bridge-monitor__image-wrap">
             <img
               className="bridge-monitor__image"

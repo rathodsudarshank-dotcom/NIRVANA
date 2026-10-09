@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { BRIDGE_INFO } from '../data/bridgeData';
+
+const REPORT_GENERATED_AT = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
 export default function Report({ bridgeState, aiState }) {
   const [showModal, setShowModal] = useState(false);
   const ref = useScrollReveal();
-  const now = useMemo(() => new Date().toISOString().slice(0, 19).replace('T', ' '), []);
 
   return (
     <>
@@ -86,7 +87,7 @@ export default function Report({ bridgeState, aiState }) {
             <div className="report-modal__section">
               <div className="report-modal__row">
                 <span className="report-modal__row-label">Report Generated</span>
-                <span className="report-modal__row-value">{now}</span>
+                <span className="report-modal__row-value">{REPORT_GENERATED_AT}</span>
               </div>
             </div>
           </div>

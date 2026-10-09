@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import logoImg from '../assets/nirvana-logo.jpeg';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export default function Footer() {
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   return (
     <footer className="footer" role="contentinfo">
@@ -56,7 +56,7 @@ export default function Footer() {
       </div>
 
       <div className="footer__bottom">
-        &copy; {currentYear} NIRVANA — Neural Infrastructure Risk &amp; Vulnerability Analytics Network. All rights reserved.
+        &copy; {CURRENT_YEAR} NIRVANA — Neural Infrastructure Risk &amp; Vulnerability Analytics Network. All rights reserved.
       </div>
     </footer>
   );

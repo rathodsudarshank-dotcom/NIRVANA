@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useSimulationContext } from '../context/SimulationContext';
 
 const NORMAL_STATE = [
   { label: 'Vibration', value: 'NORMAL', status: 'ok' },
@@ -20,7 +20,11 @@ const ANOMALY_STATE = [
 export default function SensorFusion() {
   const headingRef = useScrollReveal();
   const diagramRef = useScrollReveal();
-  const [isAnomaly, setIsAnomaly] = useState(false);
+  const simContext = useSimulationContext();
+  const isAnomaly = simContext ? simContext.isAnomaly : false;
+  const isTransitioning = simContext ? simContext.isTransitioning : false;
+  const simulateAnomaly = simContext ? simContext.simulateAnomaly : () => {};
+  const resetSimulation = simContext ? simContext.resetSimulation : () => {};
 
   const inputs = isAnomaly ? ANOMALY_STATE : NORMAL_STATE;
   const risk = isAnomaly ? 'HIGH' : 'LOW';
@@ -43,14 +47,16 @@ export default function SensorFusion() {
           <div className="fusion__controls" style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px' }}>
             <button 
               className={`btn ${!isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
-              onClick={() => setIsAnomaly(false)}
+              onClick={resetSimulation}
+              disabled={isTransitioning}
             >
               Normal State
             </button>
             <button 
               className={`btn ${isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
-              style={isAnomaly ? { background: 'var(--error)', borderColor: 'var(--error)' } : {}}
-              onClick={() => setIsAnomaly(true)}
+              style={isAnomaly ? { background: 'var(--status-red)', borderColor: 'var(--status-red)' } : {}}
+              onClick={simulateAnomaly}
+              disabled={isTransitioning}
             >
               Trigger Anomaly
             </button>

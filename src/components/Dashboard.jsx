@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { BRIDGE_INFO } from '../data/bridgeData';
 import dashImg from '../assets/bridge4.jpeg';
+
+const REPORT_TIMESTAMP = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
 function AnimatedNumber({ value, decimals = 0, duration = 1800 }) {
   const [display, setDisplay] = useState(0);
@@ -195,7 +197,7 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
           </div>
 
           {/* AI Analysis */}
-          <AIAnalysisPanel aiState={aiState} bridgeState={bridgeState} />
+          <AIAnalysisPanel aiState={aiState} />
         </div>
       )}
 
@@ -311,7 +313,7 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
   );
 }
 
-function AIAnalysisPanel({ aiState, bridgeState }) {
+function AIAnalysisPanel({ aiState }) {
   const findingIcon = (status) => {
     if (status === 'ok') return { cls: 'ai-analysis__finding-icon--ok', icon: '✓' };
     if (status === 'warning') return { cls: 'ai-analysis__finding-icon--warning', icon: '!' };
@@ -358,7 +360,7 @@ function AIAnalysisPanel({ aiState, bridgeState }) {
 }
 
 function ReportsTab({ bridgeState, aiState }) {
-  const now = useMemo(() => new Date().toISOString().slice(0, 19).replace('T', ' '), []);
+  const now = REPORT_TIMESTAMP;
 
   return (
     <div>
