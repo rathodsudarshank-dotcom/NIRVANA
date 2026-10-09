@@ -116,6 +116,50 @@ ul, ol { list-style: none; }
   animation: pageFadeIn 0.5s var(--ease-out) forwards;
 }
 
+.app-mode-banner {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-medium);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.app-mode-banner--connected {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--status-green);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.app-mode-banner--demo {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--status-amber);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.app-mode-banner__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.app-mode-banner__message {
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 @keyframes pageFadeIn {
   from {
     opacity: 0;

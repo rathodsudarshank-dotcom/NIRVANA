@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import { SimulationProvider } from './context/SimulationContext';
+import { SimulationProvider, useSimulationContext } from './context/SimulationContext';
 
 import Home from './pages/Home';
 import About from './pages/About';
@@ -12,9 +12,17 @@ import AIAnalysis from './pages/AIAnalysis';
 import Reports from './pages/Reports';
 import Contact from './pages/Contact';
 
-export default function App() {
+function AppShell() {
+  const { backendMode, apiLoading, apiError } = useSimulationContext();
+
   return (
-    <SimulationProvider>
+    <>
+      <div className={`app-mode-banner ${backendMode === 'connected' ? 'app-mode-banner--connected' : 'app-mode-banner--demo'}`}>
+        <span className="app-mode-banner__status-dot" />
+        {apiLoading ? 'Checking backend status…' : backendMode === 'connected' ? 'Connected mode: backend active' : 'Demo mode: simulated readings and AI output only'}
+        {apiError && <span className="app-mode-banner__message">{apiError}</span>}
+      </div>
+
       <Navbar />
       <main style={{ paddingTop: '72px' }}>
         <Routes>
@@ -29,6 +37,14 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <SimulationProvider>
+      <AppShell />
     </SimulationProvider>
   );
 }

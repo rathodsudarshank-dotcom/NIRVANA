@@ -1,14 +1,42 @@
 import { useState } from 'react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { submitContact } from '../lib/api';
+
+const initialForm = {
+  name: '',
+  email: '',
+  organization: '',
+  message: '',
+};
 
 export default function Contact() {
   const ref = useScrollReveal();
-  const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState(initialForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState({ type: 'idle', message: '' });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+    if (status.type !== 'idle') {
+      setStatus({ type: 'idle', message: '' });
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setStatus({ type: 'idle', message: '' });
+
+    try {
+      const result = await submitContact(formData);
+      setStatus({ type: 'success', message: result.message || 'Thank you for your inquiry. Our team will respond within 48 hours.' });
+      setFormData(initialForm);
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message || 'Unable to send your inquiry right now. Please try again later.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -23,21 +51,27 @@ export default function Contact() {
               Reach out for a demonstration or partnership inquiry.
             </p>
 
-            {submitted ? (
+            {status.type === 'success' && (
               <div style={{ marginTop: 24, padding: 20, background: 'var(--status-green-bg)', border: '1px solid var(--status-green)', borderRadius: 'var(--radius-md)', color: 'var(--status-green)', fontSize: '0.9rem', fontWeight: 500 }}>
-                Thank you for your inquiry. Our team will respond within 48 hours.
+                {status.message}
               </div>
-            ) : (
-              <form className="contact__form" onSubmit={handleSubmit}>
-                <input className="contact__input" type="text" placeholder="Full Name" required aria-label="Full Name" />
-                <input className="contact__input" type="email" placeholder="Email Address" required aria-label="Email Address" />
-                <input className="contact__input" type="text" placeholder="Organization" aria-label="Organization" />
-                <textarea className="contact__textarea" placeholder="Tell us about your infrastructure monitoring needs..." required aria-label="Message" />
-                <button className="btn btn--primary" type="submit" style={{ alignSelf: 'flex-start' }}>
-                  Send Inquiry
-                </button>
-              </form>
             )}
+
+            {status.type === 'error' && (
+              <div style={{ marginTop: 24, padding: 16, background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--status-red)', borderRadius: 'var(--radius-md)', color: '#FCA5A5', fontSize: '0.9rem' }}>
+                {status.message}
+              </div>
+            )}
+
+            <form className="contact__form" onSubmit={handleSubmit}>
+              <input className="contact__input" type="text" name="name" placeholder="Full Name" required aria-label="Full Name" value={formData.name} onChange={handleChange} />
+              <input className="contact__input" type="email" name="email" placeholder="Email Address" required aria-label="Email Address" value={formData.email} onChange={handleChange} />
+              <input className="contact__input" type="text" name="organization" placeholder="Organization" aria-label="Organization" value={formData.organization} onChange={handleChange} />
+              <textarea className="contact__textarea" name="message" placeholder="Tell us about your infrastructure monitoring needs..." required aria-label="Message" value={formData.message} onChange={handleChange} />
+              <button className="btn btn--primary" type="submit" style={{ alignSelf: 'flex-start' }} disabled={isSubmitting}>
+                {isSubmitting ? 'Sending…' : 'Send Inquiry'}
+              </button>
+            </form>
           </div>
         </div>
       </div>

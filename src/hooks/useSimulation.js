@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { NORMAL_STATE, ANOMALY_STATE, AI_NORMAL, AI_ANOMALY } from '../data/bridgeData';
 import { INITIAL_REPORTS, createSimulatedAnomalyReport } from '../data/reportData';
+import { getHealth, getMonitoringSummary, getSensorReadings, getAnomalyResults, getReports } from '../lib/api';
 
 export function useSimulation() {
   const [isAnomaly, setIsAnomaly] = useState(false);
@@ -9,6 +10,9 @@ export function useSimulation() {
   const [aiState, setAiState] = useState({ ...AI_NORMAL });
   const [reports, setReports] = useState(INITIAL_REPORTS);
   const [activeReportId, setActiveReportId] = useState(INITIAL_REPORTS[0]?.id || 'REP-2026-0915-01');
+  const [backendMode, setBackendMode] = useState('demo');
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
   const animFrameRef = useRef(null);
 
   const animateValues = useCallback((from, to, aiTarget, duration = 1800) => {
@@ -100,6 +104,92 @@ export function useSimulation() {
     });
   }, []);
 
+  useEffect(() => {
+    let didCancel = false;
+
+    const loadBackendState = async () => {
+      try {
+        setApiLoading(true);
+        setApiError('');
+
+        const health = await getHealth();
+        if (didCancel) return;
+
+        const isConnected = health?.mode === 'connected' && health?.databaseConfigured;
+
+        if (!isConnected) {
+          setBackendMode('demo');
+          setApiLoading(false);
+          return;
+        }
+
+        const [summary, readings, anomalies, reportData] = await Promise.all([
+          getMonitoringSummary(),
+          getSensorReadings(),
+          getAnomalyResults(),
+          getReports(),
+        ]);
+
+        if (didCancel) return;
+
+        if (summary?.bridgeState) {
+          setBridgeState(summary.bridgeState);
+        }
+
+        if (summary?.aiState) {
+          setAiState(summary.aiState);
+        }
+
+        if (summary?.isAnomaly !== undefined) {
+          setIsAnomaly(Boolean(summary.isAnomaly));
+        }
+
+        if (readings?.sensors?.length) {
+          const sensorMap = {};
+          readings.sensors.forEach((sensor) => {
+            sensorMap[sensor.label?.toLowerCase()] = sensor;
+          });
+
+          setBridgeState((current) => ({
+            ...current,
+            vibration: sensorMap.vibration ? { ...current.vibration, value: sensorMap.vibration.value, unit: sensorMap.vibration.unit, trend: sensorMap.vibration.trend } : current.vibration,
+            strain: sensorMap.strain ? { ...current.strain, value: sensorMap.strain.value, unit: sensorMap.strain.unit, trend: sensorMap.strain.trend } : current.strain,
+            deflection: sensorMap.deflection ? { ...current.deflection, value: sensorMap.deflection.value, unit: sensorMap.deflection.unit, trend: sensorMap.deflection.trend } : current.deflection,
+            tilt: sensorMap.tilt ? { ...current.tilt, value: sensorMap.tilt.value, unit: sensorMap.tilt.unit, trend: sensorMap.tilt.trend } : current.tilt,
+            temperature: sensorMap.temperature ? { ...current.temperature, value: sensorMap.temperature.value, unit: sensorMap.temperature.unit, trend: sensorMap.temperature.trend } : current.temperature,
+            humidity: sensorMap.humidity ? { ...current.humidity, value: sensorMap.humidity.value, unit: sensorMap.humidity.unit, trend: sensorMap.humidity.trend } : current.humidity,
+          }));
+        }
+
+        if (anomalies?.anomalies?.length) {
+          setIsAnomaly(Boolean(anomalies.anomalies.some((item) => item.status !== 'normal')));
+        }
+
+        if (reportData?.reports?.length) {
+          setReports(reportData.reports);
+          setActiveReportId(reportData.reports[0]?.id || activeReportId);
+        }
+
+        setBackendMode('connected');
+      } catch (error) {
+        if (!didCancel) {
+          setBackendMode('demo');
+          setApiError(error.message || 'Backend unavailable. Using demo data.');
+        }
+      } finally {
+        if (!didCancel) {
+          setApiLoading(false);
+        }
+      }
+    };
+
+    loadBackendState();
+
+    return () => {
+      didCancel = true;
+    };
+  }, []);
+
   return {
     isAnomaly,
     isTransitioning,
@@ -107,6 +197,9 @@ export function useSimulation() {
     aiState,
     reports,
     activeReportId,
+    backendMode,
+    apiLoading,
+    apiError,
     setActiveReportId,
     simulateAnomaly,
     resetSimulation,
