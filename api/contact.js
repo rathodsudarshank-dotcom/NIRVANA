@@ -1,4 +1,13 @@
-import { applyCors, setSecurityHeaders, checkRateLimit, isValidEmail, readJsonBody } from './_lib/security.js';
+import {
+  applyCors,
+  checkRateLimit,
+  getRequestOrigin,
+  isAllowedOrigin,
+  isApiKeyValid,
+  isValidEmail,
+  readJsonBody,
+  setSecurityHeaders,
+} from './_lib/security.js';
 
 function getRequiredApiKey() {
   return process.env.CONTACT_API_KEY || process.env.API_KEY || '';
@@ -24,17 +33,14 @@ export default async function handler(req, res) {
   }
 
   const configuredKey = getRequiredApiKey();
-  const incomingKey = req.headers['x-api-key'] || req.headers.authorization || '';
-  const origin = String(req.headers.origin || req.headers.referer || '');
-  const trustedOrigin = Boolean(origin) && (
-    origin === 'http://localhost:5173' ||
-    origin === 'http://127.0.0.1:5173' ||
-    origin.endsWith('.vercel.app') ||
-    origin.includes('localhost')
-  );
-
-  const expectedBearer = configuredKey ? `Bearer ${configuredKey}` : '';
-  const isAuthorized = trustedOrigin || (!configuredKey && !incomingKey) || (!!configuredKey && (incomingKey === configuredKey || incomingKey === expectedBearer));
+  const trustedOrigin = isAllowedOrigin(getRequestOrigin(req));
+  const apiKeyCandidates = [req.headers['x-api-key'], req.headers.authorization]
+    .filter((value) => typeof value === 'string')
+    .flatMap((value) => value.toLowerCase().startsWith('bearer ')
+      ? [value.slice(7).trim()]
+      : [value]);
+  const hasValidApiKey = Boolean(configuredKey) && apiKeyCandidates.some((candidate) => isApiKeyValid(candidate, configuredKey));
+  const isAuthorized = trustedOrigin || hasValidApiKey;
 
   if (!isAuthorized) {
     res.status(401).json({ success: false, error: 'Unauthorized.' });

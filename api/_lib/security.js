@@ -1,4 +1,64 @@
+import { timingSafeEqual } from 'node:crypto';
+
 const rateLimitBuckets = new Map();
+const MAX_RATE_LIMIT_BUCKETS = 10000;
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+function normalizeOrigin(origin) {
+  if (typeof origin !== 'string' || !origin) return '';
+
+  try {
+    const parsed = new URL(origin);
+    return parsed.origin === origin ? parsed.origin : '';
+  } catch {
+    return '';
+  }
+}
+
+export function isAllowedOrigin(origin, customOrigins = []) {
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (!normalizedOrigin) return false;
+
+  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim());
+  const allowedOrigins = new Set(
+    [...DEFAULT_ALLOWED_ORIGINS, ...customOrigins, ...configuredOrigins]
+      .map(normalizeOrigin)
+      .filter(Boolean),
+  );
+
+  return allowedOrigins.has(normalizedOrigin);
+}
+
+export function getRequestOrigin(req) {
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin.trim()) return origin.trim();
+
+  const referer = req.headers.referer;
+  if (typeof referer !== 'string' || !referer) return '';
+
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return '';
+  }
+}
+
+export function isApiKeyValid(candidate, expected) {
+  if (typeof candidate !== 'string' || typeof expected !== 'string' || !candidate || !expected) {
+    return false;
+  }
+
+  const candidateBuffer = Buffer.from(candidate);
+  const expectedBuffer = Buffer.from(expected);
+  return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
+}
 
 export function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -12,42 +72,38 @@ export function getClientIdentifier(req) {
 export function checkRateLimit(req, { windowMs = 60000, maxRequests = 20, keyPrefix = 'public' } = {}) {
   const identifier = `${keyPrefix}:${getClientIdentifier(req)}`;
   const now = Date.now();
-  const bucket = rateLimitBuckets.get(identifier) || [];
-  const validEntries = bucket.filter((timestamp) => now - timestamp < windowMs);
+  const bucket = rateLimitBuckets.get(identifier);
+  const validEntries = (bucket?.timestamps || []).filter((timestamp) => now - timestamp < windowMs);
 
   if (validEntries.length >= maxRequests) {
+    rateLimitBuckets.set(identifier, {
+      timestamps: validEntries,
+      expiresAt: validEntries[0] + windowMs,
+    });
     return false;
   }
 
+  if (!bucket && rateLimitBuckets.size >= MAX_RATE_LIMIT_BUCKETS) {
+    for (const [key, value] of rateLimitBuckets) {
+      if (value.expiresAt <= now) rateLimitBuckets.delete(key);
+    }
+    if (rateLimitBuckets.size >= MAX_RATE_LIMIT_BUCKETS) {
+      rateLimitBuckets.delete(rateLimitBuckets.keys().next().value);
+    }
+  }
+
   validEntries.push(now);
-  rateLimitBuckets.set(identifier, validEntries);
+  rateLimitBuckets.delete(identifier);
+  rateLimitBuckets.set(identifier, {
+    timestamps: validEntries,
+    expiresAt: validEntries[0] + windowMs,
+  });
   return true;
 }
 
 export function applyCors(req, res, customOrigins = []) {
   const requestOrigin = req.headers.origin;
-  const allowedOrigins = new Set([
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    ...customOrigins,
-  ]);
-
-  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  configuredOrigins.forEach((origin) => allowedOrigins.add(origin));
-
-  const originAllowed = requestOrigin && (
-    allowedOrigins.has(requestOrigin) ||
-    requestOrigin.endsWith('.vercel.app') ||
-    requestOrigin.endsWith('.vercel.app/')
-  );
-
-  if (originAllowed) {
+  if (isAllowedOrigin(requestOrigin, customOrigins)) {
     res.setHeader('Access-Control-Allow-Origin', requestOrigin);
   }
 

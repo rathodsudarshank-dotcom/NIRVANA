@@ -71,7 +71,7 @@ Validates submissions server-side and accepts them only from trusted app origins
 
 - No private credentials are stored in `VITE_*` variables
 - Secret configuration remains server-side in Vercel environment variables
-- write and ingestion endpoints are rate-limited
+- write and ingestion endpoints use a bounded in-memory rate limiter; production-wide enforcement requires a shared rate-limit store
 - CORS is restricted to known local and deployed origins
 - security headers are added through `vercel.json` and serverless function headers
 - contact and API routes reject invalid payloads before persistence or storage logic is invoked
@@ -109,7 +109,7 @@ Notes:
 
 - `DATABASE_URL` is required for durable persistence
 - `CONTACT_API_KEY` is optional but recommended for external, non-browser callers
-- `ALLOWED_ORIGINS` should be restricted to the exact frontend domains you intend to use
+- `ALLOWED_ORIGINS` must list exact frontend origins; add each Vercel preview origin separately if it needs API access
 - Do not place these values in a browser bundle or `VITE_*` variables
 
 ## Deployment on Vercel
