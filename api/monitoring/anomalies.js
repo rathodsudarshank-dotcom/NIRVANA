@@ -1,7 +1,9 @@
-import { applyCors, setSecurityHeaders, checkRateLimit, getModeFromConfig } from '../_lib/security.js';
+import { queryDatabase } from '../_lib/database.js';
+import { buildAnomaliesFromSensorRows, LATEST_SENSOR_READINGS_SQL } from '../_lib/sensorData.js';
+import { applyCors, setSecurityHeaders, checkRateLimit, getDatabaseConfigured } from '../_lib/security.js';
 import { buildDemoAnomalies } from '../_lib/demoData.js';
 
-export default async function handler(req, res) {
+export default async function handler(req, res, databaseQuery = queryDatabase) {
   applyCors(req, res);
   setSecurityHeaders(res);
 
@@ -20,16 +22,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (getModeFromConfig() === 'demo') {
+  if (!getDatabaseConfigured()) {
     res.status(200).json(buildDemoAnomalies());
     return;
   }
 
-  res.status(200).json({
-    source: 'database',
-    databaseConfigured: true,
-    mode: 'connected',
-    anomalies: [],
-    lastUpdated: new Date().toISOString(),
-  });
+  try {
+    const result = await databaseQuery(LATEST_SENSOR_READINGS_SQL);
+    const lastUpdated = result.rows.reduce((latest, row) => {
+      const timestamp = new Date(row.recordedAt).toISOString();
+      return timestamp > latest ? timestamp : latest;
+    }, '');
+
+    res.status(200).json({
+      source: 'database',
+      databaseConfigured: true,
+      mode: 'connected',
+      anomalies: buildAnomaliesFromSensorRows(result.rows),
+      lastUpdated: lastUpdated || null,
+    });
+  } catch {
+    res.status(503).json({ error: 'Anomaly screening is temporarily unavailable.' });
+  }
 }

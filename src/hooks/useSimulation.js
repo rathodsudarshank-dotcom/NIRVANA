@@ -97,10 +97,8 @@ export function useSimulation() {
   const clearDemoReports = useCallback(() => {
     setReports(prev => {
       const filtered = prev.filter(r => !r.isSimulated);
-      if (filtered.length > 0) {
-        setActiveReportId(filtered[0].id);
-      }
-      return filtered.length > 0 ? filtered : INITIAL_REPORTS;
+      setActiveReportId(filtered[0]?.id || '');
+      return filtered;
     });
   }, []);
 
@@ -165,9 +163,9 @@ export function useSimulation() {
           setIsAnomaly(Boolean(anomalies.anomalies.some((item) => item.status !== 'normal')));
         }
 
-        if (reportData?.reports?.length) {
+        if (Array.isArray(reportData?.reports)) {
           setReports(reportData.reports);
-          setActiveReportId((currentId) => reportData.reports[0]?.id || currentId);
+          setActiveReportId(reportData.reports[0]?.id || '');
         }
 
         setBackendMode('connected');

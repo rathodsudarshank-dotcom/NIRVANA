@@ -9,6 +9,7 @@ export default function Reports() {
   const {
     isAnomaly,
     isTransitioning,
+    backendMode,
     bridgeState,
     reports,
     activeReportId,
@@ -91,50 +92,56 @@ export default function Reports() {
               </p>
             </div>
 
-            {/* Live Synchronized Simulation Controls */}
+            {/* Demo simulation controls */}
             <div className="reports-sim-control-panel">
               <div className="sim-status-indicator">
                 <span className={`status-dot ${isAnomaly ? 'status-dot--red' : 'status-dot--green'}`} />
                 <span className="sim-status-text">
-                  {isAnomaly ? 'SIMULATED ANOMALY ACTIVE' : 'NOMINAL BASELINE OPERATION'}
+                  {backendMode === 'connected'
+                    ? isAnomaly ? 'RULE-BASED REVIEW REQUIRED' : 'RULE-BASED SCREENING: NOMINAL'
+                    : isAnomaly ? 'SIMULATED ANOMALY ACTIVE' : 'NOMINAL BASELINE OPERATION'}
                 </span>
                 <span className="sim-status-score">
                   Health: {bridgeState.healthScore}/100 • {bridgeState.risk} RISK
                 </span>
               </div>
 
-              <div className="sim-actions-group">
-                {!isAnomaly ? (
-                  <button
-                    className="btn btn--danger btn--sm"
-                    onClick={simulateAnomaly}
-                    disabled={isTransitioning}
-                    title="Simulate dynamic overload on Girder G2"
-                  >
-                    ⚡ Simulate Anomaly
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn--reset btn--sm"
-                    onClick={resetSimulation}
-                    disabled={isTransitioning}
-                    title="Restore normal sensor monitoring state"
-                  >
-                    ↺ Reset Simulation
-                  </button>
-                )}
+              {backendMode !== 'connected' && (
+                <div className="sim-actions-group">
+                  {!isAnomaly ? (
+                    <button
+                      className="btn btn--danger btn--sm"
+                      onClick={simulateAnomaly}
+                      disabled={isTransitioning}
+                      title="Simulate dynamic overload on Girder G2"
+                    >
+                      ⚡ Simulate Anomaly
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn--reset btn--sm"
+                      onClick={resetSimulation}
+                      disabled={isTransitioning}
+                      title="Restore normal sensor monitoring state"
+                    >
+                      ↺ Reset Simulation
+                    </button>
+                  )}
 
-                <button
-                  className="btn btn--secondary btn--sm btn-clear-demo"
-                  onClick={clearDemoReports}
-                  title="Remove generated demo reports from history"
-                >
-                  Clear Demo Events
-                </button>
-              </div>
+                  <button
+                    className="btn btn--secondary btn--sm btn-clear-demo"
+                    onClick={clearDemoReports}
+                    title="Remove generated demo reports from history"
+                  >
+                    Clear Demo Events
+                  </button>
+                </div>
+              )}
 
               <div className="sim-notice-micro">
-                Synchronized live with Live Monitor & AI Analysis
+                {backendMode === 'connected'
+                  ? 'Based on recent sensor readings and fixed trend thresholds'
+                  : 'Synchronized live with Live Monitor & AI Analysis'}
               </div>
             </div>
           </div>

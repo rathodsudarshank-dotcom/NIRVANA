@@ -7,6 +7,9 @@ const REPORT_GENERATED_AT = new Date().toISOString().slice(0, 19).replace('T', '
 export default function Report({ bridgeState, aiState }) {
   const [showModal, setShowModal] = useState(false);
   const ref = useScrollReveal();
+  const assessmentMethod = aiState.source === 'rules'
+    ? 'Rule-based sensor trend thresholds'
+    : `${aiState.confidence}% model confidence`;
 
   return (
     <>
@@ -44,7 +47,7 @@ export default function Report({ bridgeState, aiState }) {
                   ['Health Score', `${bridgeState.healthScore} / 100`],
                   ['Risk Level', bridgeState.risk],
                   ['Risk Percentage', `${bridgeState.riskPercent}%`],
-                  ['AI Confidence', `${aiState.confidence}%`],
+                  ['Assessment Method', assessmentMethod],
                 ],
               },
               {
@@ -59,7 +62,7 @@ export default function Report({ bridgeState, aiState }) {
                 ],
               },
               {
-                title: 'AI Analysis Findings',
+                title: aiState.source === 'rules' ? 'Rule-Based Screening Findings' : 'AI Analysis Findings',
                 rows: aiState.findings.map((f) => [
                   f.status === 'ok' ? '✓' : f.status === 'warning' ? '⚠' : '✕',
                   f.text,

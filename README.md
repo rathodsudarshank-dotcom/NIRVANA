@@ -21,6 +21,7 @@ The backend layer adds a thin API surface for:
 - `GET /api/monitoring/summary`
 - `GET /api/monitoring/readings`
 - `GET /api/monitoring/anomalies`
+- `POST /api/monitoring/ingest`
 - `GET /api/reports`
 - `POST /api/contact`
 
@@ -30,42 +31,60 @@ These APIs are designed to run on Vercel, and they explicitly return demo-mode r
 
 The app distinguishes the state clearly in the UI banner.
 
-- Demo mode: displays simulated readings, simulated AI findings, and report history that are clearly labeled as demo data
-- Connected mode: would be enabled when `DATABASE_URL` and the required telemetry/AI services are configured
+- Demo mode: displays illustrative readings, simulated findings, and sample report history
+- Connected mode: requires a reachable PostgreSQL database and recent readings from all six supported sensors
 
-No part of this project is presented as a real-time live sensor feed or production AI model unless you intentionally connect the required services and credentials.
+Connected risk screening uses fixed trend thresholds. It is not a trained AI model. The UI labels this distinction; demo AI-style findings are illustrative only.
 
 ## API routes
 
 ### Health
 `GET /api/health`
 
-Returns service health and whether the backend is in `demo` or `connected` mode.
+Checks database reachability and requires fresh readings from all supported sensors before returning `connected`. Readings older than 10 minutes leave the app in demo mode.
 
 ### Monitoring summary
 `GET /api/monitoring/summary`
 
-Returns a summary payload for bridge health, risk state, and AI analysis snapshots.
+Returns a summary computed from the latest stored sensor readings, including rule-based risk thresholds.
 
 ### Sensor readings
 `GET /api/monitoring/readings`
 
-Returns the current sensor values and trends for the bridge dashboard.
+Returns the latest stored value for each supported sensor.
 
 ### Anomaly results
 `GET /api/monitoring/anomalies`
 
-Returns anomaly status metadata for the current operational state.
+Returns rule-based screening alerts derived from elevated sensor trends. It does not call an AI model.
 
 ### Reports
 `GET /api/reports`
 
-Returns historical or demo reports as structured JSON.
+Returns persisted JSON reports or the sample reports used in demo mode.
+
+### Sensor ingestion
+`POST /api/monitoring/ingest`
+
+Requires `INGEST_API_KEY` as `Authorization: Bearer <key>` or `X-API-Key`. Accepts batches of up to 100 readings for the supported sensor IDs, validates timestamps and numeric values, and writes them to PostgreSQL.
+
+```json
+{
+   "readings": [
+      { "sensorId": "ACC-01", "value": 0.16, "trend": 2.5 },
+      { "sensorId": "SG-01", "value": 145, "trend": 1.2 },
+      { "sensorId": "LVDT-01", "value": 2.4, "trend": 2 },
+      { "sensorId": "TILT-01", "value": 0.04, "trend": 0 },
+      { "sensorId": "TEMP-01", "value": 28.4, "trend": -1 },
+      { "sensorId": "HUM-01", "value": 62, "trend": -1 }
+   ]
+}
+```
 
 ### Contact form
 `POST /api/contact`
 
-Validates submissions server-side and accepts them only from trusted app origins or with a configured API key. It rate-limits submissions and does not log message contents.
+Validates submissions server-side and stores them in `contact_submissions`. Requests must come from a trusted app origin or include a configured API key.
 
 ## Security boundaries
 
@@ -101,6 +120,7 @@ These are optional and only needed for a connected deployment:
 
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/database
+INGEST_API_KEY=replace-with-a-long-random-secret
 CONTACT_API_KEY=replace-with-server-side-secret
 ALLOWED_ORIGINS=https://your-app.vercel.app,https://www.your-app.vercel.app
 ```
@@ -108,17 +128,35 @@ ALLOWED_ORIGINS=https://your-app.vercel.app,https://www.your-app.vercel.app
 Notes:
 
 - `DATABASE_URL` is required for durable persistence
+- `INGEST_API_KEY` is required to accept sensor readings
 - `CONTACT_API_KEY` is optional but recommended for external, non-browser callers
 - `ALLOWED_ORIGINS` must list exact frontend origins; add each Vercel preview origin separately if it needs API access
 - Do not place these values in a browser bundle or `VITE_*` variables
+
+Initialize the database after setting `DATABASE_URL`:
+
+```bash
+psql "$DATABASE_URL" -f api/_lib/schema.sql
+```
+
+Send a recent reading for each supported sensor at least once every 10 minutes before the health endpoint reports connected mode.
+
+Run the checks locally with:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
 
 ## Deployment on Vercel
 
 1. Push this repository to GitHub
 2. Import it in Vercel
-3. Add the required environment variables in the Vercel Project Settings
-4. Deploy the project
-5. Ensure the SPA rewrite handles frontend routes correctly via `vercel.json`
+3. Add the environment variables in Vercel Project Settings
+4. Apply `api/_lib/schema.sql` to the configured PostgreSQL database
+5. Configure the sensor collector to post all six sensor IDs using `INGEST_API_KEY`
+6. Deploy the project and ensure the SPA rewrite handles frontend routes correctly via `vercel.json`
 
 ## Current implementation status
 
@@ -127,15 +165,15 @@ Notes:
 - Vite frontend and React Router pages
 - visual dashboard and reports experience
 - demo simulation UI
-- API layer returning demo responses
-- secure contact validation and rate limiting
+- API layer with demo fallback and PostgreSQL-backed telemetry/contact/report queries
+- authenticated, validated sensor ingestion endpoint
+- contact submission persistence and rate limiting
 - Vercel headers and SPA routing fallback
 
 ### Requires real services to become fully connected
 
-- real sensor ingestion pipeline
+- physical sensor devices and an upstream collector that sends readings to the ingestion endpoint
 - real AI service or inference layer
-- durable database with persistent storage
 - production email or notification system if contact form must persist or notify staff
 
 ## Files changed
@@ -156,10 +194,11 @@ Key files include:
 - `api/reports/index.js`
 - `api/contact.js`
 - `api/_lib/security.js`
+- `api/_lib/database.js`
+- `api/_lib/schema.sql`
+- `api/_lib/sensorData.js`
 - `api/_lib/demoData.js`
 
 ## Final note
 
-This project remains a demo-ready monitoring platform until real sensor or AI infrastructure is connected. The current implementation intentionally does not claim live telemetry or a production AI model is running. It is designed to be a secure, maintainable foundation that can be upgraded to connected mode without replacing the app�s current stack.
--
-This project remains a demo-ready monitoring platform until real sensor or AI infrastructure is connected. The current implementation intentionally does not claim live telemetry or a production AI model is running. It is designed to be a secure, maintainable foundation that can be upgraded to connected mode without replacing the app's current stack.
+This project remains in demo mode until a database is initialized and fresh sensor readings are ingested. Connected risk screening is rule-based; a production AI model is not included.

@@ -8,12 +8,13 @@ import {
   readJsonBody,
   setSecurityHeaders,
 } from './_lib/security.js';
+import { queryDatabase } from './_lib/database.js';
 
 function getRequiredApiKey() {
   return process.env.CONTACT_API_KEY || process.env.API_KEY || '';
 }
 
-export default async function handler(req, res) {
+export default async function handler(req, res, databaseQuery = queryDatabase) {
   applyCors(req, res);
   setSecurityHeaders(res);
 
@@ -47,11 +48,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!configuredKey && !process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL?.trim()) {
     res.status(503).json({
       success: false,
       mode: 'demo',
-      error: 'Contact submission is not configured on this deployment. Set CONTACT_API_KEY and DATABASE_URL to enable it securely.',
+      error: 'Contact submission is not configured on this deployment. Set DATABASE_URL and apply api/_lib/schema.sql.',
     });
     return;
   }
@@ -91,19 +92,20 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (process.env.DATABASE_URL) {
-    res.status(202).json({
-      success: true,
-      accepted: true,
-      mode: 'connected',
-      message: 'Your inquiry was accepted and queued for review.',
-    });
+  try {
+    await databaseQuery(
+      'INSERT INTO contact_submissions (name, email, organization, message) VALUES ($1, $2, $3, $4)',
+      [name.trim(), email.trim(), organization?.trim() || null, message.trim()],
+    );
+  } catch {
+    res.status(503).json({ success: false, error: 'Unable to store your inquiry right now. Please try again later.' });
     return;
   }
 
-  res.status(503).json({
-    success: false,
-    mode: 'demo',
-    error: 'Database persistence is not configured for contact submissions. Add DATABASE_URL and CONTACT_API_KEY to enable this feature securely.',
+  res.status(202).json({
+    success: true,
+    accepted: true,
+    mode: 'connected',
+    message: 'Your inquiry was saved for review.',
   });
 }

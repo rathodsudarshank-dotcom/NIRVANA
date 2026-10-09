@@ -1,7 +1,8 @@
-import { applyCors, setSecurityHeaders, checkRateLimit, getModeFromConfig } from '../_lib/security.js';
+import { queryDatabase } from '../_lib/database.js';
+import { applyCors, setSecurityHeaders, checkRateLimit, getDatabaseConfigured } from '../_lib/security.js';
 import { buildDemoReports } from '../_lib/demoData.js';
 
-export default async function handler(req, res) {
+export default async function handler(req, res, databaseQuery = queryDatabase) {
   applyCors(req, res);
   setSecurityHeaders(res);
 
@@ -20,16 +21,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (getModeFromConfig() === 'demo') {
+  if (!getDatabaseConfigured()) {
     res.status(200).json(buildDemoReports());
     return;
   }
 
-  res.status(200).json({
-    source: 'database',
-    databaseConfigured: true,
-    mode: 'connected',
-    reports: [],
-    total: 0,
-  });
+  try {
+    const result = await databaseQuery('SELECT id, payload, created_at FROM reports ORDER BY created_at DESC LIMIT 100');
+    const reports = result.rows.map((row) => ({
+      ...row.payload,
+      id: row.payload.id || row.id,
+      createdAt: row.created_at,
+    }));
+
+    res.status(200).json({
+      source: 'database',
+      databaseConfigured: true,
+      mode: 'connected',
+      reports,
+      total: reports.length,
+    });
+  } catch {
+    res.status(503).json({ error: 'Reports are temporarily unavailable.' });
+  }
 }

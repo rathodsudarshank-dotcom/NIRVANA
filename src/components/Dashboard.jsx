@@ -68,7 +68,7 @@ function HealthRing({ score, risk }) {
   );
 }
 
-export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitioning, simulateAnomaly, resetSimulation, compact = false }) {
+export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitioning, simulateAnomaly, resetSimulation, backendMode = 'demo', compact = false }) {
   const ref = useScrollReveal();
   const [activeTab, setActiveTab] = useState('overview');
   const tabRefs = useRef([]);
@@ -205,17 +205,19 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
               )}
 
               {/* Simulation Controls */}
-              <div className="simulation-controls">
-                {!isAnomaly ? (
-                  <button className="btn btn--danger btn--sm" onClick={simulateAnomaly} disabled={isTransitioning}>
-                    ⚡ Simulate Anomaly
-                  </button>
-                ) : (
-                  <button className="btn btn--reset btn--sm" onClick={resetSimulation} disabled={isTransitioning}>
-                    ↺ Reset Simulation
-                  </button>
-                )}
-              </div>
+              {backendMode !== 'connected' && (
+                <div className="simulation-controls">
+                  {!isAnomaly ? (
+                    <button className="btn btn--danger btn--sm" onClick={simulateAnomaly} disabled={isTransitioning}>
+                      ⚡ Simulate Anomaly
+                    </button>
+                  ) : (
+                    <button className="btn btn--reset btn--sm" onClick={resetSimulation} disabled={isTransitioning}>
+                      ↺ Reset Simulation
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -326,7 +328,7 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
           <div className="section__label">Live Dashboard</div>
           <h2 className="section__title">Structural Health Monitoring</h2>
           <p className="section__subtitle">
-            Real-time infrastructure metrics, AI analysis, and risk assessment —
+            Infrastructure metrics, sensor trend screening, and risk assessment —
             all in one integrated monitoring interface.
           </p>
         </div>
@@ -338,6 +340,7 @@ export default function Dashboard({ bridgeState, aiState, isAnomaly, isTransitio
 }
 
 function AIAnalysisPanel({ aiState }) {
+  const isRuleBased = aiState.source === 'rules';
   const findingIcon = (status) => {
     if (status === 'ok') return { cls: 'ai-analysis__finding-icon--ok', icon: '✓' };
     if (status === 'warning') return { cls: 'ai-analysis__finding-icon--warning', icon: '!' };
@@ -349,10 +352,10 @@ function AIAnalysisPanel({ aiState }) {
       <div className="ai-analysis__header">
         <div className="ai-analysis__title">
           <span className="ai-analysis__title-dot" />
-          NIRVANA AI Analysis
+          {isRuleBased ? 'Rule-Based Screening' : 'NIRVANA AI Analysis'}
         </div>
         <div className="ai-analysis__confidence">
-          Model Confidence: {aiState.confidence}%
+          {isRuleBased ? 'Fixed sensor-trend thresholds' : `Model Confidence: ${aiState.confidence}%`}
         </div>
       </div>
 
@@ -385,6 +388,9 @@ function AIAnalysisPanel({ aiState }) {
 
 function ReportsTab({ bridgeState, aiState }) {
   const now = REPORT_TIMESTAMP;
+  const assessmentMethod = aiState.source === 'rules'
+    ? 'Rule-based sensor trend thresholds'
+    : `${aiState.confidence}% model confidence`;
 
   return (
     <div>
@@ -405,7 +411,7 @@ function ReportsTab({ bridgeState, aiState }) {
           { section: 'Current Assessment', rows: [
             ['Health Score', `${bridgeState.healthScore} / 100`],
             ['Risk Level', bridgeState.risk],
-            ['AI Confidence', `${aiState.confidence}%`],
+            ['Assessment Method', assessmentMethod],
             ['Report Timestamp', now],
           ]},
           { section: 'Sensor Readings', rows: [
@@ -432,7 +438,7 @@ function ReportsTab({ bridgeState, aiState }) {
 
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>
-            AI Recommendation
+            {aiState.source === 'rules' ? 'Screening Recommendation' : 'AI Recommendation'}
           </div>
           <div className="ai-analysis__recommendation">
             <div className="ai-analysis__recommendation-text">{aiState.recommendation}</div>

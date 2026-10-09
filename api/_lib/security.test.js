@@ -43,7 +43,7 @@ test('contact endpoint rejects untrusted origins and accepts an exact origin or 
   delete process.env.API_KEY;
   delete process.env.DATABASE_URL;
 
-  const callContact = async (headers, remoteAddress) => {
+  const callContact = async (headers, remoteAddress, databaseQuery) => {
     const req = Object.assign(new EventEmitter(), {
       method: 'POST',
       headers,
@@ -57,7 +57,7 @@ test('contact endpoint rejects untrusted origins and accepts an exact origin or 
       json(body) { this.body = body; return this; },
       end() {},
     };
-    const pending = contactHandler(req, res);
+    const pending = contactHandler(req, res, databaseQuery);
     req.emit('data', Buffer.from(JSON.stringify({
       name: 'Test User',
       email: 'test@example.com',
@@ -73,6 +73,17 @@ test('contact endpoint rejects untrusted origins and accepts an exact origin or 
     assert.equal((await callContact({ origin: 'http://localhost.evil.test:5173' }, '203.0.113.79')).statusCode, 401);
     assert.equal((await callContact({ origin: 'https://nirvana.example' }, '203.0.113.80')).statusCode, 503);
     assert.equal((await callContact({ 'x-api-key': 'test-contact-secret' }, '203.0.113.81')).statusCode, 503);
+
+    process.env.DATABASE_URL = 'postgresql://test.invalid/nirvana';
+    let savedValues;
+    const stored = await callContact({ origin: 'https://nirvana.example' }, '203.0.113.82', async (sql, values) => {
+      assert.match(sql, /INSERT INTO contact_submissions/);
+      savedValues = values;
+      return { rowCount: 1 };
+    });
+    assert.equal(stored.statusCode, 202);
+    assert.equal(stored.body.accepted, true);
+    assert.deepEqual(savedValues, ['Test User', 'test@example.com', null, 'This is a valid test inquiry.']);
   } finally {
     for (const [key, value] of env) {
       if (value === undefined) delete process.env[key];

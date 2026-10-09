@@ -20,16 +20,35 @@ const ANOMALY_STATE = [
 export default function SensorFusion() {
   const headingRef = useScrollReveal();
   const diagramRef = useScrollReveal();
-  const simContext = useSimulationContext();
-  const isAnomaly = simContext ? simContext.isAnomaly : false;
-  const isTransitioning = simContext ? simContext.isTransitioning : false;
-  const simulateAnomaly = simContext ? simContext.simulateAnomaly : () => {};
-  const resetSimulation = simContext ? simContext.resetSimulation : () => {};
+  const {
+    isAnomaly,
+    isTransitioning,
+    simulateAnomaly,
+    resetSimulation,
+    backendMode,
+    bridgeState,
+    aiState,
+  } = useSimulationContext();
 
-  const inputs = isAnomaly ? ANOMALY_STATE : NORMAL_STATE;
-  const risk = isAnomaly ? 'HIGH' : 'LOW';
-  const riskClass = isAnomaly ? 'risk-high' : 'risk-low';
-  const recommendation = isAnomaly ? 'INSPECTION REQUIRED' : 'ROUTINE MONITORING';
+  const isConnected = backendMode === 'connected';
+  const liveInputs = [
+    { label: 'Vibration', metric: bridgeState.vibration },
+    { label: 'Strain', metric: bridgeState.strain },
+    { label: 'Deflection', metric: bridgeState.deflection },
+    { label: 'Tilt', metric: bridgeState.tilt },
+    { label: 'Temperature', metric: bridgeState.temperature },
+    { label: 'Humidity', metric: bridgeState.humidity },
+  ].map(({ label, metric }) => ({
+    label,
+    value: `${metric.value} ${metric.unit}`,
+    status: metric.trend >= 15 ? 'error' : metric.trend >= 5 ? 'warning' : 'ok',
+  }));
+  const inputs = isConnected ? liveInputs : isAnomaly ? ANOMALY_STATE : NORMAL_STATE;
+  const risk = isConnected ? aiState.risk : isAnomaly ? 'HIGH' : 'LOW';
+  const riskClass = risk === 'HIGH' ? 'risk-high' : risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+  const recommendation = isConnected
+    ? aiState.recommendation
+    : isAnomaly ? 'INSPECTION REQUIRED' : 'ROUTINE MONITORING';
 
   return (
     <section className="section">
@@ -38,29 +57,32 @@ export default function SensorFusion() {
           <div className="section__label">Sensor Fusion</div>
           <h2 className="section__title">Multimodal Data Integration</h2>
           <p className="section__subtitle">
-            NIRVANA fuses signals from multiple sensor types through a neural-network pipeline
-            to produce a unified, explainable risk assessment.
+            {isConnected
+              ? 'Connected sensor readings are screened using fixed trend thresholds. This view does not represent an AI model.'
+              : 'Explore a simulated sensor-fusion workflow with illustrative readings and risk findings.'}
           </p>
         </div>
 
         <div className="fusion__interactive reveal" ref={diagramRef}>
-          <div className="fusion__controls" style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px' }}>
-            <button 
-              className={`btn ${!isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
-              onClick={resetSimulation}
-              disabled={isTransitioning}
-            >
-              Normal State
-            </button>
-            <button 
-              className={`btn ${isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
-              style={isAnomaly ? { background: 'var(--status-red)', borderColor: 'var(--status-red)' } : {}}
-              onClick={simulateAnomaly}
-              disabled={isTransitioning}
-            >
-              Trigger Anomaly
-            </button>
-          </div>
+          {!isConnected && (
+            <div className="fusion__controls" style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '40px' }}>
+              <button
+                className={`btn ${!isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
+                onClick={resetSimulation}
+                disabled={isTransitioning}
+              >
+                Normal State
+              </button>
+              <button
+                className={`btn ${isAnomaly ? 'btn--primary' : 'btn--secondary'}`}
+                style={isAnomaly ? { background: 'var(--status-red)', borderColor: 'var(--status-red)' } : {}}
+                onClick={simulateAnomaly}
+                disabled={isTransitioning}
+              >
+                Trigger Anomaly
+              </button>
+            </div>
+          )}
 
           <div className="fusion__diagram" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
             <div className="fusion__inputs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -83,7 +105,7 @@ export default function SensorFusion() {
             </div>
 
             <div className="fusion__core" style={{ margin: '24px auto' }}>
-              Multi-Modal Sensor Fusion Engine
+              {isConnected ? 'Trend Threshold Screening' : 'Simulated Sensor-Fusion Workflow'}
             </div>
 
             <div className="fusion__arrow">

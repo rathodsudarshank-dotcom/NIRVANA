@@ -7,6 +7,7 @@ export default function Monitor() {
   const {
     isAnomaly,
     isTransitioning,
+    backendMode,
     bridgeState,
     aiState,
     simulateAnomaly,
@@ -27,6 +28,7 @@ export default function Monitor() {
             isTransitioning={isTransitioning}
             simulateAnomaly={simulateAnomaly}
             resetSimulation={resetSimulation}
+            backendMode={backendMode}
             compact={true}
           />
         </div>
